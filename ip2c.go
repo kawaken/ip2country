@@ -1,44 +1,49 @@
 package main
 
 import (
-	"bufio"
+	"flag"
 	"fmt"
-	"net/http"
-	"regexp"
+	"github.com/nranchev/go-libGeoIP"
+	"os"
+	"strings"
 )
 
-const apnic_ip_url = "http://ftp.apnic.net/stats/apnic/delegated-apnic-latesttt"
+var (
+	dbPath    string
+	ipAddress string
+)
 
-func filter(regex *regexp.Regexp, line string) (output string) {
-	if regex.MatchString(line) {
-		output = line
-	} else {
-		output = ""
+func init() {
+	maxmindDbPath := os.Getenv("MAXMIND_DB_PATH")
+
+	if maxmindDbPath == "" {
+		currentDir, _ := os.Getwd()
+		maxmindDbPath = strings.Join([]string{currentDir, "GeoIP.dat"}, "/")
 	}
-	return
+
+	flag.StringVar(&dbPath, "db", maxmindDbPath, "Maxmind db file path")
+	flag.Parse()
 }
 
 func main() {
-	regex, err := regexp.Compile("ipv4")
+	if flag.NArg() == 0 {
+		fmt.Fprintln(os.Stderr, "usage: ip2c [--db db-file-path] ipaddress")
+		os.Exit(1)
+	}
+
+	ipAddress := flag.Arg(0)
+
+	geoIp, err := libgeo.Load(dbPath)
 	if err != nil {
-		panic(err)
+		fmt.Printf("Error: %s\n", err.Error())
+		return
 	}
 
-	response, err := http.Get(apnic_ip_url)
-	if err != nil {
-		panic(err)
+	loc := geoIp.GetLocationByIP(ipAddress)
+	if loc == nil {
+		fmt.Println("")
+		return
 	}
 
-	defer response.Body.Close()
-	scanner := bufio.NewScanner(response.Body)
-	for scanner.Scan() {
-		filter(regex, scanner.Text())
-	}
-
-	if err != nil {
-		panic(err)
-	}
-
-	//fmt.Printf("%s\n", string(contents))
-	fmt.Print("hoge")
+	fmt.Println(loc.CountryName)
 }
