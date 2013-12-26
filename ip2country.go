@@ -5,7 +5,7 @@ import (
 	"bufio"
 	"flag"
 	"fmt"
-	"github.com/nranchev/go-libGeoIP"
+	"github.com/kawaken/go-libGeoIP"
 	"os"
 	"strings"
 )
